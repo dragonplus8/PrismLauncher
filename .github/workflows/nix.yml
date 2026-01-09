@@ -1,5 +1,9 @@
 name: Nix
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -82,9 +86,6 @@ jobs:
           - os: ubuntu-22.04-arm
             system: aarch64-linux
 
-          - os: macos-15-intel
-            system: x86_64-darwin
-
           - os: macos-14
             system: aarch64-darwin
 
@@ -92,7 +93,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31

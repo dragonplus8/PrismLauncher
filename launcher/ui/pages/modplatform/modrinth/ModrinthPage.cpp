@@ -146,7 +146,7 @@ void ModrinthPage::onSelectionChanged(QModelIndex curr, [[maybe_unused]] QModelI
 
     if (!m_current->extraDataLoaded) {
         qDebug() << "Loading modrinth modpack information";
-        ResourceAPI::Callback<ModPlatform::IndexedPack> callbacks;
+        ResourceAPI::Callback<ModPlatform::IndexedPack::Ptr> callbacks;
 
         auto id = m_current->addonId;
         callbacks.on_fail = [this](QString reason, int) {
@@ -157,10 +157,8 @@ void ModrinthPage::onSelectionChanged(QModelIndex curr, [[maybe_unused]] QModelI
                 return;  // wrong request?
             }
 
-            *m_current = pack;
-
             QVariant current_updated;
-            current_updated.setValue(m_current);
+            current_updated.setValue(pack);
 
             if (!m_model->setData(curr, current_updated, Qt::UserRole))
                 qWarning() << "Failed to cache extra info for the current pack!";
@@ -168,7 +166,7 @@ void ModrinthPage::onSelectionChanged(QModelIndex curr, [[maybe_unused]] QModelI
             suggestCurrent();
             updateUI();
         };
-        if (auto netJob = m_api.getProjectInfo({ { m_current->addonId } }, std::move(callbacks)); netJob) {
+        if (auto netJob = m_api.getProjectInfo({ m_current }, std::move(callbacks)); netJob) {
             m_job = netJob;
             m_job->start();
         }
@@ -205,7 +203,7 @@ void ModrinthPage::onSelectionChanged(QModelIndex curr, [[maybe_unused]] QModelI
                     ++it;
 #endif
             for (const auto& version : m_current->versions) {
-                m_ui->versionSelectionBox->addItem(version.getVersionDisplayString(), QVariant(version.addonId));
+                m_ui->versionSelectionBox->addItem(version.getVersionDisplayString(), QVariant(version.fileId));
             }
 
             QVariant current_updated;
@@ -220,7 +218,7 @@ void ModrinthPage::onSelectionChanged(QModelIndex curr, [[maybe_unused]] QModelI
             CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->exec();
         };
 
-        auto netJob = m_api.getProjectVersions({ *m_current, {}, {}, ModPlatform::ResourceType::Modpack }, std::move(callbacks));
+        auto netJob = m_api.getProjectVersions({ m_current, {}, {}, ModPlatform::ResourceType::Modpack }, std::move(callbacks));
 
         m_job2 = netJob;
         m_job2->start();
@@ -229,9 +227,9 @@ void ModrinthPage::onSelectionChanged(QModelIndex curr, [[maybe_unused]] QModelI
         for (auto version : m_current->versions) {
             if (!version.version.contains(version.version))
                 m_ui->versionSelectionBox->addItem(QString("%1 - %2").arg(version.version, version.version_number),
-                                                   QVariant(version.addonId));
+                                                   QVariant(version.fileId));
             else
-                m_ui->versionSelectionBox->addItem(version.version, QVariant(version.addonId));
+                m_ui->versionSelectionBox->addItem(version.version, QVariant(version.fileId));
         }
 
         suggestCurrent();
@@ -314,7 +312,7 @@ void ModrinthPage::suggestCurrent()
     }
 
     for (auto& ver : m_current->versions) {
-        if (ver.addonId == m_selectedVersion) {
+        if (ver.fileId == m_selectedVersion) {
             QMap<QString, QString> extra_info;
             extra_info.insert("pack_id", m_current->addonId.toString());
             extra_info.insert("pack_version_id", ver.fileId.toString());

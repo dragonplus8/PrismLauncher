@@ -22,6 +22,8 @@
 #include "modplatform/flame/FlameCheckUpdate.h"
 #include "modplatform/modrinth/ModrinthCheckUpdate.h"
 
+#include <QClipboard>
+#include <QShortcut>
 #include <QTextBrowser>
 #include <QTreeWidgetItem>
 
@@ -437,30 +439,34 @@ void ResourceUpdateDialog::appendResource(CheckUpdateTask::Update const& info, Q
     item_top->setExpanded(true);
 
     auto provider_item = new QTreeWidgetItem(item_top);
-    provider_item->setText(0, tr("Provider: %1").arg(ModPlatform::ProviderCapabilities::readableName(info.provider)));
+    QString provider_name = ModPlatform::ProviderCapabilities::readableName(info.provider);
+    provider_item->setText(0, tr("Provider: %1").arg(provider_name));
+    provider_item->setData(0, Qt::UserRole, provider_name);
 
     auto old_version_item = new QTreeWidgetItem(item_top);
     old_version_item->setText(0, tr("Old version: %1").arg(info.old_version));
+    old_version_item->setData(0, Qt::UserRole, info.old_version);
 
     auto new_version_item = new QTreeWidgetItem(item_top);
     new_version_item->setText(0, tr("New version: %1").arg(info.new_version));
+    new_version_item->setData(0, Qt::UserRole, info.new_version);
 
     if (info.new_version_type.has_value()) {
-        auto new_version_type_itme = new QTreeWidgetItem(item_top);
-        new_version_type_itme->setText(0, tr("New Version Type: %1").arg(info.new_version_type.value().toString()));
+        auto new_version_type_item = new QTreeWidgetItem(item_top);
+        new_version_type_item->setText(0, tr("New Version Type: %1").arg(info.new_version_type.value().toString()));
+        new_version_type_item->setData(0, Qt::UserRole, info.new_version_type.value().toString());
     }
 
     if (!requiredBy.isEmpty()) {
         auto requiredByItem = new QTreeWidgetItem(item_top);
         if (requiredBy.length() == 1) {
             requiredByItem->setText(0, tr("Required by: %1").arg(requiredBy.back()));
+            requiredByItem->setData(0, Qt::UserRole, requiredBy.back());
         } else {
             requiredByItem->setText(0, tr("Required by:"));
-            auto i = 0;
             for (auto req : requiredBy) {
                 auto reqItem = new QTreeWidgetItem(requiredByItem);
                 reqItem->setText(0, req);
-                reqItem->insertChildren(i++, { reqItem });
             }
         }
 
@@ -475,6 +481,7 @@ void ResourceUpdateDialog::appendResource(CheckUpdateTask::Update const& info, Q
     auto changelog_area = new QTextBrowser();
 
     QString text = info.changelog;
+    changelog->setData(0, Qt::UserRole, text);
     if (info.provider == ModPlatform::ResourceProvider::MODRINTH) {
         text = markdownToHTML(info.changelog.toUtf8());
     }
